@@ -7,18 +7,18 @@ import com.example.happyplaces.databinding.ActivityAddHappyPlaceBinding
 
 class AddHappyPlaceActivity : AppCompatActivity() {
 
-    private lateinit var binding: ActivityAddHappyPlaceBinding
+    private  var binding: ActivityAddHappyPlaceBinding? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        setContentView(binding.root)
         binding = ActivityAddHappyPlaceBinding.inflate(layoutInflater)
+        setContentView(binding?.root)
 
-        setSupportActionBar(binding.toolbarAddPlace)
+        setSupportActionBar(binding?.toolbarAddPlace)
 
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        binding.toolbarAddPlace.setNavigationOnClickListener {
+        binding?.toolbarAddPlace?.setNavigationOnClickListener {
             onBackPressedDispatcher.onBackPressed()
         }
     }
