@@ -1,8 +1,9 @@
 package com.example.happyplaces
 
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.widget.Button
+import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 
@@ -12,13 +13,19 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val toolbarHomePage = findViewById<Toolbar>(R.id.toolbar_home_page)
-        setSupportActionBar(toolbarHomePage)
+        val toolbar: Toolbar = findViewById(R.id.toolbar_home_page)
+        setSupportActionBar(toolbar)
         supportActionBar?.title = "Happy Places"
 
-        val fabAddHappyPlace = findViewById<FloatingActionButton>(R.id.fabAddHappyPlace)
+        val fabAddHappyPlace: FloatingActionButton = findViewById(R.id.fabAddHappyPlace)
         fabAddHappyPlace.setOnClickListener {
             val intent = Intent(this@MainActivity, AddHappyPlaceActivity::class.java)
+            startActivity(intent)
+        }
+
+        val btnViewHappyPlaces: Button = findViewById(R.id.btnViewHappyPlaces)
+        btnViewHappyPlaces.setOnClickListener {
+            val intent = Intent(this@MainActivity, HappyPlacesListActivity::class.java)
             startActivity(intent)
         }
     }

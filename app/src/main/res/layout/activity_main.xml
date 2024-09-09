@@ -17,6 +17,11 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"/>
 
+    <ListView
+        android:id="@+id/listViewHappyPlaces"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fabAddHappyPlace"
         android:layout_width="wrap_content"
@@ -26,4 +31,14 @@
         app:srcCompat="@drawable/ic_add"
         app:backgroundTint="@color/Purple_200"/>
 
+    <Button
+        android:id="@+id/btnViewHappyPlaces"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="16dp"
+        android:text="View Happy Places"
+        android:textSize="16sp"
+        android:backgroundTint="@color/Purple_200"
+        android:textColor="@android:color/white"/>
 </FrameLayout>
