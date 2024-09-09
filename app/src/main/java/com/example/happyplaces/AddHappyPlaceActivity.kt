@@ -1,85 +1,252 @@
 package com.example.happyplaces
 
+import android.annotation.SuppressLint
+import android.app.Activity
 import android.app.DatePickerDialog
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.location.Location
+import android.location.LocationManager
+import android.net.Uri
 import android.os.Bundle
+import android.provider.MediaStore
+import android.provider.Settings
 import android.view.View
+import android.widget.*
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import com.example.happyplaces.databinding.ActivityAddHappyPlaceBinding
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Locale
-
+import androidx.appcompat.widget.AppCompatEditText
+import androidx.appcompat.widget.Toolbar
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import com.example.happyplaces.models.HappyPlaceModel
+import com.google.android.gms.location.LocationServices
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
+import java.io.OutputStream
+import java.util.*
+import android.Manifest
 
 class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
 
-    private var binding: ActivityAddHappyPlaceBinding? = null
-    private var cal = Calendar.getInstance()
-    private lateinit var dateSetListener: DatePickerDialog.OnDateSetListener
+    private lateinit var etTitle: AppCompatEditText
+    private lateinit var etDescription: AppCompatEditText
+    private lateinit var etLocation: AppCompatEditText
+    private lateinit var etDate: AppCompatEditText
+    private lateinit var tvAddImage: TextView
+    private lateinit var ivPlaceImage: ImageView
+    private lateinit var btnSave: Button
+
+    private var saveImageToInternalStorage: Uri? = null
+    private val LOCATION_PERMISSION_REQUEST_CODE = 1
+
+    companion object {
+        private const val GALLERY = 1
+        private const val CAMERA = 2
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_add_happy_place)
 
-        binding = ActivityAddHappyPlaceBinding.inflate(layoutInflater)
-        setContentView(binding?.root)
+        etTitle = findViewById(R.id.et_title)
+        etDescription = findViewById(R.id.et_description)
+        etLocation = findViewById(R.id.et_location)
+        etDate = findViewById(R.id.et_date)
+        tvAddImage = findViewById(R.id.tv_add_image)
+        ivPlaceImage = findViewById(R.id.iv_place_image)
+        btnSave = findViewById(R.id.btn_save)
 
-        setSupportActionBar(binding?.toolbarAddPlace)
-
+        setSupportActionBar(findViewById(R.id.toolbar_add_place))
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        binding?.toolbarAddPlace?.setNavigationOnClickListener {
+        findViewById<Toolbar>(R.id.toolbar_add_place).setNavigationOnClickListener {
             onBackPressedDispatcher.onBackPressed()
         }
-        dateSetListener = DatePickerDialog.OnDateSetListener { view, year, month, dayOfMonth ->
-            cal.set(Calendar.YEAR, year)
-            cal.set(Calendar.MONTH, month)
-            cal.set(Calendar.DAY_OF_MONTH, dayOfMonth)
-            updateDateInView()
-        }
-        binding?.etDate?.setOnClickListener(this)
+
+        checkLocationPermission()
+        checkLocationServices()
+
+        etDate.setOnClickListener(this)
+        tvAddImage.setOnClickListener(this)
+        btnSave.setOnClickListener(this)
     }
 
     override fun onClick(v: View?) {
-        when (v!!.id) {
+        when (v?.id) {
             R.id.et_date -> {
-                DatePickerDialog(
-                    this@AddHappyPlaceActivity,
-                    dateSetListener,
-                    cal.get(Calendar.YEAR),
-                    cal.get(Calendar.MONTH),
-                    cal.get(Calendar.DAY_OF_MONTH)
-                ).show()
+                openDatePickerDialog()
+            }
+            R.id.tv_add_image -> {
+                showImageChooserDialog()
+            }
+            R.id.btn_save -> {
+                saveHappyPlace()
             }
         }
     }
 
-    private fun updateDateInView() {
+    @SuppressLint("SetTextI18n")
+    private fun openDatePickerDialog() {
+        val calendar = Calendar.getInstance()
+        val year = calendar.get(Calendar.YEAR)
+        val month = calendar.get(Calendar.MONTH)
+        val day = calendar.get(Calendar.DAY_OF_MONTH)
 
-        val myFormat = "dd.MM.yyyy"
-        val sdf = SimpleDateFormat(myFormat, Locale.getDefault())
-        binding?.etDate?.setText(sdf.format(cal.time)).toString()
+        val datePickerDialog = DatePickerDialog(this, { _, selectedYear, selectedMonth, selectedDay ->
+            etDate.setText("$selectedDay/${selectedMonth + 1}/$selectedYear")
+        }, year, month, day)
+
+        datePickerDialog.show()
+    }
+
+    private fun showImageChooserDialog() {
+        val imageDialog = AlertDialog.Builder(this)
+        imageDialog.setTitle("Select Action")
+        val pictureDialogItems = arrayOf("Select photo from gallery", "Capture photo from camera")
+        imageDialog.setItems(pictureDialogItems) { _, which ->
+            when (which) {
+                0 -> choosePhotoFromGallery()
+                1 -> takePhotoFromCamera()
+            }
+        }
+        imageDialog.show()
+    }
+
+    private fun choosePhotoFromGallery() {
+        val galleryIntent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+        startActivityForResult(galleryIntent, GALLERY)
+    }
+
+    private fun takePhotoFromCamera() {
+        val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+        startActivityForResult(cameraIntent, CAMERA)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        if (resultCode == Activity.RESULT_OK) {
+            if (requestCode == GALLERY) {
+                if (data != null) {
+                    val contentUri = data.data
+                    try {
+                        val selectedImageBitmap = MediaStore.Images.Media.getBitmap(this.contentResolver, contentUri)
+                        saveImageToInternalStorage = contentUri
+
+                        ivPlaceImage.setImageBitmap(selectedImageBitmap)
+                    } catch (e: IOException) {
+                        e.printStackTrace()
+                        Toast.makeText(this@AddHappyPlaceActivity, "Failed to load the image from gallery!", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } else if (requestCode == CAMERA) {
+                val thumbnail: Bitmap = data!!.extras!!.get("data") as Bitmap
+                ivPlaceImage.setImageBitmap(thumbnail)
+
+                saveImageToInternalStorage = saveImageToInternalStorage(thumbnail)
+            }
+        }
+    }
+
+    private fun saveImageToInternalStorage(bitmap: Bitmap): Uri {
+        val wrapper = ContextWrapper(applicationContext)
+        var file = wrapper.getDir("HappyPlacesImages", Context.MODE_PRIVATE)
+        file = File(file, "${UUID.randomUUID()}.jpg")
+
+        try {
+            val stream: OutputStream = FileOutputStream(file)
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream)
+            stream.flush()
+            stream.close()
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
+        return Uri.parse(file.absolutePath)
+    }
+
+    private fun saveHappyPlace() {
+        val title = etTitle.text.toString()
+        val description = etDescription.text.toString()
+        val location = etLocation.text.toString()
+        val date = etDate.text.toString()
+
+        if (title.isEmpty()) {
+            Toast.makeText(this, "Please enter a title", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (description.isEmpty()) {
+            Toast.makeText(this, "Please enter a description", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (location.isEmpty()) {
+            Toast.makeText(this, "Please enter a location", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val happyPlace = HappyPlaceModel(
+            0,
+            title,
+            saveImageToInternalStorage.toString(),
+            description,
+            date,
+            location
+        )
+
+        val intent = Intent()
+        intent.putExtra("HAPPY_PLACE", happyPlace)
+        setResult(Activity.RESULT_OK, intent)
+        finish()
+    }
+
+    private fun checkLocationPermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                LOCATION_PERMISSION_REQUEST_CODE)
+        } else {
+            getLastLocation()
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                getLastLocation()
+            } else {
+                Toast.makeText(this, "Location permission denied", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun checkLocationServices() {
+        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+            val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+            startActivity(intent)
+        }
+    }
+
+    @SuppressLint("SetTextI18n")
+    private fun getLastLocation() {
+        val fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            == PackageManager.PERMISSION_GRANTED) {
+            fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
+                if (location != null) {
+                    val latitude = location.latitude
+                    val longitude = location.longitude
+                    etLocation.setText("Lat: $latitude, Lng: $longitude")
+                } else {
+                    Toast.makeText(this, "Unable to get location", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

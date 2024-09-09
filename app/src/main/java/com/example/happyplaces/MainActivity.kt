@@ -1,29 +1,25 @@
 package com.example.happyplaces
 
 import android.content.Intent
-import android.os.Bundle
-import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
-import com.example.happyplaces.databinding.ActivityMainBinding
-
+import android.os.Bundle
+import androidx.appcompat.widget.Toolbar
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 
 class MainActivity : AppCompatActivity() {
 
-    private var binding: ActivityMainBinding? = null
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
 
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding?.root)
+        val toolbarHomePage = findViewById<Toolbar>(R.id.toolbar_home_page)
+        setSupportActionBar(toolbarHomePage)
+        supportActionBar?.title = "Happy Places"
 
-        setSupportActionBar(binding?.toolbarHomePage)
-
-        binding?.fabAddHappyPlace?.setOnClickListener {
-            Log.d("MainActivity", "FAB clicked")
-            val intent = Intent(this, AddHappyPlaceActivity::class.java)
+        val fabAddHappyPlace = findViewById<FloatingActionButton>(R.id.fabAddHappyPlace)
+        fabAddHappyPlace.setOnClickListener {
+            val intent = Intent(this@MainActivity, AddHappyPlaceActivity::class.java)
             startActivity(intent)
         }
-
     }
 }
