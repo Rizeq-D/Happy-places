@@ -30,9 +30,12 @@ import java.io.IOException
 import java.io.OutputStream
 import java.util.*
 import android.Manifest
+import android.content.ContentValues
+import com.example.happyplaces.data.DatabaseHelper
 
 class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
 
+    private lateinit var dbHelper: DatabaseHelper
     private lateinit var etTitle: AppCompatEditText
     private lateinit var etDescription: AppCompatEditText
     private lateinit var etLocation: AppCompatEditText
@@ -41,7 +44,7 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
     private lateinit var ivPlaceImage: ImageView
     private lateinit var btnSave: Button
 
-    private var saveImageToInternalStorage: Uri? = null
+    private var imageUri: Uri? = null
     private val LOCATION_PERMISSION_REQUEST_CODE = 1
 
     companion object {
@@ -52,6 +55,8 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_add_happy_place)
+
+        dbHelper = DatabaseHelper(this)
 
         etTitle = findViewById(R.id.et_title)
         etDescription = findViewById(R.id.et_description)
@@ -66,13 +71,15 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
         findViewById<Toolbar>(R.id.toolbar_add_place).setNavigationOnClickListener {
             onBackPressedDispatcher.onBackPressed()
         }
+        btnSave.setOnClickListener {
+            saveTheDataOfHappyPlaces()
+        }
 
         checkLocationPermission()
         checkLocationServices()
 
         etDate.setOnClickListener(this)
         tvAddImage.setOnClickListener(this)
-        btnSave.setOnClickListener(this)
     }
 
     override fun onClick(v: View?) {
@@ -82,9 +89,6 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
             }
             R.id.tv_add_image -> {
                 showImageChooserDialog()
-            }
-            R.id.btn_save -> {
-                saveHappyPlace()
             }
         }
     }
@@ -131,23 +135,15 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
 
         if (resultCode == Activity.RESULT_OK) {
             if (requestCode == GALLERY) {
-                if (data != null) {
-                    val contentUri = data.data
-                    try {
-                        val selectedImageBitmap = MediaStore.Images.Media.getBitmap(this.contentResolver, contentUri)
-                        saveImageToInternalStorage = contentUri
-
-                        ivPlaceImage.setImageBitmap(selectedImageBitmap)
-                    } catch (e: IOException) {
-                        e.printStackTrace()
-                        Toast.makeText(this@AddHappyPlaceActivity, "Failed to load the image from gallery!", Toast.LENGTH_SHORT).show()
-                    }
+                val contentUri = data?.data
+                contentUri?.let {
+                    ivPlaceImage.setImageURI(it)
+                    imageUri = it
                 }
             } else if (requestCode == CAMERA) {
                 val thumbnail: Bitmap = data!!.extras!!.get("data") as Bitmap
                 ivPlaceImage.setImageBitmap(thumbnail)
-
-                saveImageToInternalStorage = saveImageToInternalStorage(thumbnail)
+                imageUri = saveImageToInternalStorage(thumbnail)
             }
         }
     }
@@ -168,7 +164,7 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
         return Uri.parse(file.absolutePath)
     }
 
-    private fun saveHappyPlace() {
+    private fun saveTheDataOfHappyPlaces() {
         val title = etTitle.text.toString()
         val description = etDescription.text.toString()
         val location = etLocation.text.toString()
@@ -190,16 +186,29 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
         val happyPlace = HappyPlaceModel(
             0,
             title,
-            saveImageToInternalStorage.toString(),
+            imageUri?.toString() ?: "", // Use URI if available, else empty string
             description,
             date,
             location
         )
 
-        val intent = Intent()
-        intent.putExtra("HAPPY_PLACE", happyPlace)
-        setResult(Activity.RESULT_OK, intent)
-        finish()
+        val db = dbHelper.writableDatabase
+        val values = ContentValues().apply {
+            put(DatabaseHelper.COLUMN_TITLE, title)
+            put(DatabaseHelper.COLUMN_DESCRIPTION, description)
+            put(DatabaseHelper.COLUMN_DATE, date)
+            put(DatabaseHelper.COLUMN_LOCATION, location)
+            put(DatabaseHelper.COLUMN_IMAGE, imageUri?.toString() ?: "")
+        }
+
+        val newRowId = db.insert(DatabaseHelper.TABLE_NAME, null, values)
+
+        if (newRowId != -1L) {
+            Toast.makeText(this, "Happy Place Saved!", Toast.LENGTH_SHORT).show()
+            finish()
+        } else {
+            Toast.makeText(this, "Error Saving Happy Place", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun checkLocationPermission() {
@@ -250,3 +259,4 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
         }
     }
 }
+
