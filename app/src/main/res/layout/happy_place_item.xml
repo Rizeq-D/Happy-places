@@ -5,17 +5,17 @@
     android:padding="16dp">
 
     <ImageView
-        android:id="@+id/imageViewHappyPlace"
+        android:id="@+id/image_View_Happy_Place"
         android:layout_width="80dp"
         android:layout_height="80dp"
         android:scaleType="centerCrop"
-        android:src="@drawable/add_screen_image_placeholder" />
+        android:src="@drawable/add_screen_image_placeholder"/>
 
     <TextView
         android:id="@+id/textViewTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_toEndOf="@id/imageViewHappyPlace"
+        android:layout_toEndOf="@id/image_View_Happy_Place"
         android:layout_alignParentTop="true"
         android:textSize="18sp"
         android:textColor="@android:color/black" />
@@ -24,7 +24,7 @@
         android:id="@+id/textViewDescription"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_toEndOf="@id/imageViewHappyPlace"
+        android:layout_toEndOf="@id/image_View_Happy_Place"
         android:layout_below="@id/textViewTitle"
         android:textColor="@android:color/darker_gray" />
 

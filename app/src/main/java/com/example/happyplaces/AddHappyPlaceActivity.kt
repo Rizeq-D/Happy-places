@@ -186,7 +186,7 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
         val happyPlace = HappyPlaceModel(
             0,
             title,
-            imageUri?.toString() ?: "",
+            imageUri?.toString() ?: "", // Use URI if available, else empty string
             description,
             date,
             location

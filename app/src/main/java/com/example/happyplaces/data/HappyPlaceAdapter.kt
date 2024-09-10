@@ -13,6 +13,7 @@ import android.widget.TextView
 import com.bumptech.glide.Glide
 import com.example.happyplaces.R
 import com.example.happyplaces.models.HappyPlaceModel
+import java.io.File
 
 class HappyPlaceAdapter(
     private val context: Context,
@@ -33,7 +34,7 @@ class HappyPlaceAdapter(
 
         val view = convertView ?: LayoutInflater.from(context).inflate(R.layout.happy_place_item, parent, false)
         val happyPlace = getItem(position) as HappyPlaceModel
-        val imageViewHappyPlace = view.findViewById<ImageView>(R.id.imageViewHappyPlace)
+        val imageViewHappyPlace = view.findViewById<ImageView>(R.id.image_View_Happy_Place)
         val textViewTitle = view.findViewById<TextView>(R.id.textViewTitle)
         val textViewDescription = view.findViewById<TextView>(R.id.textViewDescription)
         val buttonEdit = view.findViewById<ImageButton>(R.id.buttonEdit)
@@ -44,12 +45,16 @@ class HappyPlaceAdapter(
         textViewTitle.text = happyPlace.title
         textViewDescription.text = happyPlace.description
 
-        val imageUri = Uri.parse(happyPlace.image)
-        Glide.with(context)
-            .load(imageUri)
-            .placeholder(R.drawable.add_screen_image_placeholder)
-            .error(R.drawable.ic_error)
-            .into(imageViewHappyPlace)
+        val uri = Uri.parse(happyPlace.image)
+        val file = File(uri.path)
+        if (file.exists()) {
+            Glide.with(context)
+                .load(file)
+                .placeholder(R.drawable.add_screen_image_placeholder)
+                .into(imageViewHappyPlace)
+        } else {
+            Log.e("Image Load", "File does not exist: $file")
+        }
 
         buttonEdit.setOnClickListener {
             onEditClick(happyPlace)
